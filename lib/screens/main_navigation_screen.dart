@@ -18,11 +18,13 @@ class _MainNavigationScreenState
     extends State<MainNavigationScreen> {
   int selectedIndex = 0;
 
-  final List<Widget> screens = const [
-    DashboardScreen(),
-    TransactionsScreen(),
-    StatisticsScreen(),
-    ProfileScreen(),
+  List<Widget> get screens => [
+    const DashboardScreen(),
+    const TransactionsScreen(),
+    StatisticsScreen(
+      isActive: selectedIndex == 2,
+    ),
+    const ProfileScreen(),
   ];
 
   @override

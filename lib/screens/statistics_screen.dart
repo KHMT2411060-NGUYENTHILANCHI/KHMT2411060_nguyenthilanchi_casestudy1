@@ -7,7 +7,12 @@ import '../database/database_helper.dart';
 import '../database/transaction_model.dart';
 
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  final bool isActive;
+
+  const StatisticsScreen({
+    super.key,
+    this.isActive = false,
+  });
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
@@ -28,29 +33,49 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     loadTransactions();
   }
 
+  @override
+  void didUpdateWidget(covariant StatisticsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.isActive && !oldWidget.isActive) {
+      loadTransactions();
+    }
+  }
+
   Future<void> loadTransactions() async {
-    final data = await DatabaseHelper.instance.getTransactions();
+    try {
+      final data = await DatabaseHelper.instance.getTransactions();
+      final allTransactions = data
+          .map((item) => TransactionModel.fromMap(item))
+          .toList();
 
-    final allTransactions = data
-        .map((item) => TransactionModel.fromMap(item))
-        .toList();
+      if (!mounted) return;
 
-    if (!mounted) return;
+      setState(() {
+        transactions = allTransactions;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
 
-    setState(() {
-      transactions = allTransactions;
-      isLoading = false;
-    });
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không tải được dữ liệu thống kê: $e'),
+        ),
+      );
+    }
   }
 
   DateTime? parseDate(String value) {
     final text = value.trim();
 
-    // Hỗ trợ yyyy-MM-dd và các định dạng ISO.
     final isoDate = DateTime.tryParse(text);
     if (isoDate != null) return isoDate;
 
-    // Hỗ trợ dd/MM/yyyy hoặc dd-MM-yyyy.
     final parts = text.split(RegExp(r'[/\-]'));
 
     if (parts.length == 3) {
@@ -75,7 +100,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   bool isInSelectedPeriod(TransactionModel transaction) {
     final date = parseDate(transaction.date);
 
-    // Nếu không đọc được ngày, vẫn giữ giao dịch để không mất dữ liệu.
     if (date == null) return true;
 
     final now = DateTime.now();
@@ -144,6 +168,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.white,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Thống kê',
           style: TextStyle(
@@ -151,6 +177,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Làm mới',
+            onPressed: loadTransactions,
+            icon: const Icon(Icons.refresh, color: Colors.black87),
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -196,9 +229,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   SizedBox(
                     height: 230,
                     width: 230,
@@ -236,9 +267,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Wrap(
                     alignment: WrapAlignment.center,
                     spacing: 20,
@@ -260,7 +289,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
             const SizedBox(height: 16),
 
-            // Tổng quan thu chi
+            // Chi tiết thu chi
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -322,7 +351,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-
                   if (expenseByCategory.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
@@ -342,14 +370,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 18),
                         child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Expanded(
-                                  child: Text(entry.key),
-                                ),
+                                Expanded(child: Text(entry.key)),
                                 Text(
                                   formatMoney(entry.value),
                                   style: const TextStyle(
@@ -362,14 +387,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
                               child: LinearProgressIndicator(
-                                value: percent,
+                                value: percent.clamp(0.0, 1.0),
                                 minHeight: 8,
                                 backgroundColor:
                                 const Color(0xFFE9EDF5),
                                 valueColor:
-                                AlwaysStoppedAnimation<Color>(
-                                  blue,
-                                ),
+                                AlwaysStoppedAnimation<Color>(blue),
                               ),
                             ),
                             const SizedBox(height: 5),
@@ -426,7 +449,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             style: TextStyle(
               color: selected ? Colors.white : Colors.grey.shade700,
               fontSize: 12,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              fontWeight:
+              selected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),
@@ -502,7 +526,10 @@ class DonutChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius - 5);
+    final rect = Rect.fromCircle(
+      center: center,
+      radius: radius - 5,
+    );
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
