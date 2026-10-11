@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'transactions_screen.dart';
 import 'statistics_screen.dart';
+import 'profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -21,6 +22,7 @@ class _MainNavigationScreenState
     DashboardScreen(),
     TransactionsScreen(),
     StatisticsScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -52,6 +54,11 @@ class _MainNavigationScreenState
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'Thống kê',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Cá nhân',
           ),
         ],
       ),
